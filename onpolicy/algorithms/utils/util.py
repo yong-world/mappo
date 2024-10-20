@@ -4,7 +4,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-def init(module, weight_init, bias_init, gain=1):
+def init(module, weight_init, bias_init, gain=1):  # 偏置赋值0
     weight_init(module.weight.data, gain=gain)
     if module.bias is not None:
         bias_init(module.bias.data)

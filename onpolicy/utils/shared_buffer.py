@@ -217,6 +217,7 @@ class SharedReplayBuffer(object):
             if self._use_gae:
                 self.value_preds[-1] = next_value
                 gae = 0
+                # 奖励顺序反转
                 for step in reversed(range(self.rewards.shape[0])):
                     if self._use_popart or self._use_valuenorm:
                         if self.algo == "mat" or self.algo == "mat_dec":
@@ -356,11 +357,11 @@ class SharedReplayBuffer(object):
                           n_rollout_threads * episode_length * num_agents,
                           num_mini_batch))
             mini_batch_size = batch_size // num_mini_batch
-
+        # 分组min_batch随机采样
         rand = torch.randperm(batch_size).numpy()
         sampler = [rand[i * mini_batch_size:(i + 1) * mini_batch_size] for i in range(num_mini_batch)]
 
-        share_obs = self.share_obs[:-1].reshape(-1, *self.share_obs.shape[3:])
+        share_obs = self.share_obs[:-1].reshape(-1, *self.share_obs.shape[3:])  # 定下第四个维度后再自动展开填充前边的维度
         obs = self.obs[:-1].reshape(-1, *self.obs.shape[3:])
         rnn_states = self.rnn_states[:-1].reshape(-1, *self.rnn_states.shape[3:])
         rnn_states_critic = self.rnn_states_critic[:-1].reshape(-1, *self.rnn_states_critic.shape[3:])

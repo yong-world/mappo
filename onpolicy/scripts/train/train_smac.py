@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import copy
 import sys
 import os
 import wandb
@@ -10,6 +11,7 @@ import torch
 from onpolicy.config import get_config
 from onpolicy.envs.env_wrappers import ShareSubprocVecEnv, ShareDummyVecEnv
 
+os.environ["WANDB_API_KEY"] ='b4b4693b1c0e93f4231460c5bdfb2c81ba142260'
 """Train script for SMAC."""
 
 def parse_smacv2_distribution(args):
@@ -70,6 +72,9 @@ def make_train_env(all_args):
 
         return init_env
 
+    # from onpolicy.envs.starcraft2.StarCraft2_Env import StarCraft2Env
+    # env1 = StarCraft2Env(all_args)
+    # a=env1.observation_space
     if all_args.n_rollout_threads == 1:
         return ShareDummyVecEnv([get_env_fn(0)])
     else:
@@ -106,7 +111,7 @@ def make_eval_env(all_args):
 
 
 def parse_args(args, parser):
-    parser.add_argument('--map_name', type=str, default='3m',
+    parser.add_argument('--map_name', type=str, default='3s5z',
                         help="Which smac map to run on")
     parser.add_argument('--units', type=str, default='10v10') # for smac v2
     parser.add_argument("--add_move_state", action='store_true', default=False)
@@ -119,7 +124,7 @@ def parse_args(args, parser):
     parser.add_argument("--use_state_agent", action='store_false', default=True)
     parser.add_argument("--use_mustalive", action='store_false', default=True)
     parser.add_argument("--add_center_xy", action='store_false', default=True)
-
+    # 命令行参数解析时将意料之外的参数以列表形式存储在索引[1]中
     all_args = parser.parse_known_args(args)[0]
 
     return all_args
@@ -152,10 +157,10 @@ def main(args):
         all_args.dec_actor = True
         all_args.share_actor = True
 
-    # cuda
+    # cuda 是否选择满足复现性，使同输入能同输出
     if all_args.cuda and torch.cuda.is_available():
         print("choose to use gpu...")
-        device = torch.device("cuda:0")
+        device = torch.device("cuda:1")
         torch.set_num_threads(all_args.n_training_threads)
         if all_args.cuda_deterministic:
             torch.backends.cudnn.benchmark = False
@@ -173,16 +178,19 @@ def main(args):
     if all_args.use_wandb:
         run = wandb.init(config=all_args,
                          project=all_args.env_name,
-                         entity=all_args.user_name,
+                        #  entity=all_args.user_name,
                          notes=socket.gethostname(),
                          name=str(all_args.algorithm_name) + "_" +
-                              str(all_args.experiment_name) + "_" + 
+                              # str(all_args.experiment_name) + "_" +
+                              str(all_args.map_name) + "_" +
                               str(all_args.units) +
                               "_seed" + str(all_args.seed),
-                        #  group=all_args.map_name,
+                         group=all_args.map_name,
                          dir=str(run_dir),
-                         job_type="training",
-                         reinit=True)
+                         # job_type="training",
+                        #  reinit=True)
+                         )
+        all_args_copy = copy.deepcopy(all_args)
         all_args = wandb.config # for wandb sweep
     else:
         if not run_dir.exists():
